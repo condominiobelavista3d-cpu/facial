@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Cadastro Facial</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
+
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background: #f2f2f2;
+    text-align: center;
+    margin: 0;
+    padding: 10px;
+  }
+
+  img.logo {
+    width: 40vw;
+    max-width: 160px;
+    margin: 5px auto;
+  }
+
+  input, select {
+    width: 90vw;
+    max-width: 320px;
+    padding: 5px;
+    margin: 3px auto;
+    font-size: 12px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    display: block;
+  }
+
+  button {
+    width: 60vw;
+    max-width: 220px;
+    padding: 10px;
+    margin: 8px;
+    font-size: 15px;
+    border-radius: 8px;
+    border: none;
+    background: #0066cc;
+    color: white;
+    cursor: pointer;
+  }
+
+  .camera-container {
+    position: relative;
+    width: 80vw;
+    max-width: 300px;
+    margin: auto;
+  }
+
+  video {
+    width: 70%;
+    border-radius: 12px;
+  }
+
+  .face-oval {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 40%;
+    height: 60%;
+    border: 3px solid #00ff00;
+    border-radius: 50% / 60%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+
+  .btn-trocar {
+    position: absolute;
+    top: 1px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 50%;
+    background: rgba(255,0,0,0.7);
+    z-index: 10;
+  }
+
+  .info {
+    background: #e0f0ff;
+    padding: 5px;
+    border-radius: 8px;
+    margin: 10px auto;
+    font-size: 12px;
+    max-width: 320px;
+  }
+
+  .preview-box {
+    width: 80vw;
+    max-width: 240px;
+    height: 200px;
+    margin: 10px auto;
+    border: 2px dashed #999;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+  }
+
+  .preview-box img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 12px;
+  }
+
+  .lgpd {
+    background: #fff3cd;
+    padding: 12px;
+    border-radius: 10px;
+    font-size: 14px;
+    max-width: 320px;
+    margin: auto;
+  }
+</style>
+</head>
+
+<body>
+
+<img src="logo.png" class="logo">
+
+<h4>Cadastro Facial Parque das Amoras</h4>
+
+<div class="lgpd" id="lgpdBox">
+  Ao enviar sua foto, você autoriza o uso dela para cadastro no sistema de controle de acesso do condomínio.----> TIRE A FOTO EM UM FUNDO CLARO, BEM ILUMINADO, SEM OCULOS, SEM SORRISO , SEM MUITA MAQUIAGEM :) <----.
+  <br><br>
+  <button onclick="aceitarLGPD()">OK</button>
+</div>
+
+<div id="formulario" style="display:none;">
+
+  <input id="nome" placeholder="Nome completo">
+  <select id="bloco">
+    <option value="" selected disabled>Bloco</option>
+	<option value="00">funcionario</option>
+    <option value="01">01</option>
+    <option value="02">02</option>
+    <option value="03">03</option>
+    <option value="04">04</option>
+    <option value="05">05</option>
+    <option value="06">06</option>
+    <option value="07">07</option>
+    <option value="08">08</option>
+    <option value="09">09</option>
+    <option value="10">10</option>
+    <option value="11">11</option>
+    <option value="12">12</option>
+    <option value="13">13</option>
+    <option value="14">14</option>
+    <option value="15">15</option>
+    <option value="16">16</option>
+    <option value="17">17</option>
+    <option value="18">18</option>
+    <option value="19">19</option>
+    <option value="20">20</option>
+    <option value="21">21</option>
+    <option value="22">22</option>
+    <option value="23">23</option>
+    <option value="24">24</option>
+  </select>
+  <select id="apto">
+    <option value="" selected disabled>Apartamento</option>
+	 <option value="000">funcionario</option>
+    <option value="101">101</option>
+    <option value="102">102</option>
+    <option value="103">103</option>
+    <option value="104">104</option>
+    <option value="201">201</option>
+    <option value="202">202</option>
+    <option value="203">203</option>
+    <option value="204">204</option>
+    <option value="301">301</option>
+    <option value="302">302</option>
+    <option value="303">303</option>
+    <option value="304">304</option>
+    <option value="401">401</option>
+    <option value="402">402</option>
+    <option value="403">403</option>
+    <option value="404">404</option>
+  </select>
+
+  <div class="info" id="mensagem">
+    Posicione seu rosto dentro do oval verde, não use os oculos e não sorria.
+  </div>
+
+  <div class="camera-container">
+    <button class="btn-trocar" onclick="trocarCamera()">Inverter Câmera</button>
+    <video id="video" autoplay playsinline></video>
+    <div class="face-oval"></div>
+  </div>
+
+  <button onclick="capturar()">Capturar Foto</button>
+
+  <div class="preview-box">
+    <img id="fotoPreview" src="">
+  </div>
+  <div class="info" id="fotoInfo" style="display:none;">
+    Foto: <span id="fotoTamanho">0</span> KB
+  </div>
+
+  <button onclick="enviar()">Finalizar</button>
+
+  <canvas id="canvas" style="display:none;"></canvas>
+
+  <div id="status" style="display:none; font-weight:bold;">
+    Salvando dados, aguarde Validação da ADMINISTRAÇÃO...
+  </div>
+
+</div>
+
+<script>
+let usandoFrontal = true;
+let rostoDetectado = false;
+let stream = null;
+let faceMesh = null;
+
+function aceitarLGPD() {
+  document.getElementById("lgpdBox").style.display = "none";
+  document.getElementById("formulario").style.display = "block";
+  iniciarCamera();
+}
+
+async function iniciarCamera() {
+  if (stream) {
+    stream.getTracks().forEach(t => t.stop());
+  }
+
+  stream = await navigator.mediaDevices.getUserMedia({
+    video: { facingMode: usandoFrontal ? "user" : "environment" }
+  });
+
+  const video = document.getElementById("video");
+  video.srcObject = stream;
+
+  if (usandoFrontal) {
+    iniciarFaceMesh(video);
+  } else {
+    rostoDetectado = true; // libera captura na traseira
+    document.getElementById("mensagem").innerText =
+      "Posicione o rosto no oval verde, SEM OCULOS E NAO SORRIA.";
+  }
+}
+
+function trocarCamera() {
+  usandoFrontal = !usandoFrontal;
+  iniciarCamera();
+}
+
+function iniciarFaceMesh(video) {
+  faceMesh = new FaceMesh({
+    locateFile: file =>
+      `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
+  });
+
+  faceMesh.setOptions({
+    maxNumFaces: 1,
+    minDetectionConfidence: 0.5,
+    minTrackingConfidence: 0.5
+  });
+
+  faceMesh.onResults(results => {
+    if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
+      rostoDetectado = true;
+      document.getElementById("mensagem").innerText =
+        "Mantenha o rosto dentro do oval verde, NAO SORRIA, SEM OCULOS.";
+    } else {
+      rostoDetectado = false;
+      document.getElementById("mensagem").innerText =
+        "Centralize o rosto no oval.";
+    }
+  });
+
+  processarVideo(video);
+}
+
+async function processarVideo(video) {
+  if (!usandoFrontal) return;
+
+  if (video.readyState >= 2) {
+    const off = document.createElement("canvas");
+    const ctx = off.getContext("2d");
+
+    off.width = video.videoWidth;
+    off.height = video.videoHeight;
+
+    ctx.translate(off.width, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, 0, 0);
+
+    await faceMesh.send({ image: off });
+  }
+
+  requestAnimationFrame(() => processarVideo(video));
+}
+
+function capturar() {
+  if (!rostoDetectado) {
+    alert("Rosto não detectado. Centralize o rosto.");
+    return;
+  }
+
+  const video = document.getElementById("video");
+  const canvas = document.getElementById("canvas");
+  const ctx = canvas.getContext("2d");
+
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+
+  // Limpa transformações anteriores
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+  if (usandoFrontal) {
+    ctx.translate(canvas.width, 0);
+    ctx.scale(-1, 1);
+  }
+
+  ctx.drawImage(video, 0, 0);
+
+  // Gera automaticamente a melhor versão possível com no máximo 99 KB.
+  const resultado = comprimirImagem(canvas, 99 * 1024);
+
+  if (!resultado) {
+    alert("Não foi possível preparar a foto.");
+    return;
+  }
+
+  document.getElementById("fotoPreview").src = resultado.dataUrl;
+  document.getElementById("fotoTamanho").innerText =
+    (resultado.blob.size / 1024).toFixed(1);
+  document.getElementById("fotoInfo").style.display = "block";
+
+  // Guarda a versão comprimida para o envio.
+  window.fotoComprimida = resultado.dataUrl;
+
+  document.getElementById("mensagem").innerText =
+    "Foto capturada. Confira a imagem e clique em Finalizar.";
+}
+
+
+/*
+ * Comprime a imagem tentando preservar a maior qualidade possível.
+ *
+ * Primeiro reduz somente a qualidade JPEG.
+ * Se ainda ultrapassar 99 KB, reduz progressivamente a resolução.
+ */
+function comprimirImagem(sourceCanvas, limiteBytes) {
+  let width = sourceCanvas.width;
+  let height = sourceCanvas.height;
+
+  const qualidades = [0.92, 0.88, 0.84, 0.80, 0.76, 0.72, 0.68, 0.64, 0.60];
+
+  // Primeira tentativa: mantém a resolução original.
+  for (const qualidade of qualidades) {
+    const tentativa = canvasParaDataUrl(sourceCanvas, width, height, qualidade);
+    if (tentativa.blob.size <= limiteBytes) {
+      return tentativa;
+    }
+  }
+
+  // Se a qualidade mínima ainda não for suficiente,
+  // reduz a resolução gradualmente.
+  let escala = 0.90;
+
+  while (escala >= 0.30) {
+    const novoWidth = Math.max(320, Math.round(width * escala));
+    const novoHeight = Math.max(240, Math.round(height * escala));
+
+    for (const qualidade of [0.82, 0.78, 0.74, 0.70, 0.66, 0.62, 0.58, 0.54, 0.50]) {
+      const tentativa = canvasParaDataUrl(
+        sourceCanvas,
+        novoWidth,
+        novoHeight,
+        qualidade
+      );
+
+      if (tentativa.blob.size <= limiteBytes) {
+        return tentativa;
+      }
+    }
+
+    escala -= 0.10;
+  }
+
+  return null;
+}
+
+
+function canvasParaDataUrl(sourceCanvas, width, height, qualidade) {
+  const temp = document.createElement("canvas");
+  temp.width = width;
+  temp.height = height;
+
+  const ctx = temp.getContext("2d");
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+
+  ctx.drawImage(
+    sourceCanvas,
+    0, 0, sourceCanvas.width, sourceCanvas.height,
+    0, 0, width, height
+  );
+
+  const dataUrl = temp.toDataURL("image/jpeg", qualidade);
+
+  // Calcula o tamanho real aproximado do Base64.
+  const base64 = dataUrl.split(",")[1];
+  const blob = base64ToBlob(base64, "image/jpeg");
+
+  return {
+    dataUrl: dataUrl,
+    blob: blob
+  };
+}
+
+
+function base64ToBlob(base64, mimeType) {
+  const byteCharacters = atob(base64);
+  const byteArrays = [];
+
+  for (let offset = 0; offset < byteCharacters.length; offset += 1024) {
+    const slice = byteCharacters.slice(offset, offset + 1024);
+    const byteNumbers = new Array(slice.length);
+
+    for (let i = 0; i < slice.length; i++) {
+      byteNumbers[i] = slice.charCodeAt(i);
+    }
+
+    byteArrays.push(new Uint8Array(byteNumbers));
+  }
+
+  return new Blob(byteArrays, { type: mimeType });
+}
+
+
+async function enviar() {
+  const nome = document.getElementById("nome").value.trim();
+  const bloco = document.getElementById("bloco").value.trim();
+  const apto = document.getElementById("apto").value.trim();
+
+  if (!nome || !bloco || !apto) {
+    alert("Preencha todos os campos!");
+    return;
+  }
+
+  if (!window.fotoComprimida) {
+    alert("Capture a foto antes de finalizar.");
+    return;
+  }
+
+  const status = document.getElementById("status");
+  const botaoFinalizar = document.querySelector('button[onclick="enviar()"]');
+
+  status.style.display = "block";
+  status.style.color = "#0066cc";
+  status.innerText = "Enviando dados, aguarde...";
+
+  if (botaoFinalizar) {
+    botaoFinalizar.disabled = true;
+    botaoFinalizar.innerText = "Enviando...";
+  }
+
+  try {
+    const resposta = await fetch(
+      "https://script.google.com/macros/s/AKfycbxZb2uNhG6pU3hW7C8IYT3RjIPu4limpXJvm6fWqGmytsLpP739MHxqPseCA95GltvP/exec",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          nome: nome,
+          bloco: bloco,
+          apto: apto,
+          img: window.fotoComprimida
+        })
+      }
+    );
+
+    if (!resposta.ok) {
+      throw new Error("HTTP " + resposta.status);
+    }
+
+    const texto = (await resposta.text()).trim();
+
+    if (texto === "SCRIPT_OK" || texto === "OK") {
+      status.style.color = "green";
+      status.innerText =
+        "✅ SCRIPT OK — Dados enviados e foto salva com sucesso.";
+
+      if (botaoFinalizar) {
+        botaoFinalizar.innerText = "Enviado com sucesso";
+      }
+
+      document.getElementById("mensagem").innerText =
+        "Cadastro enviado com sucesso. Aguarde a validação da administração.";
+
+      // Não recarrega automaticamente.
+    } else {
+      throw new Error("Resposta inesperada do Apps Script: " + texto);
+    }
+
+  } catch (erro) {
+    console.error("Erro no envio:", erro);
+
+    status.style.color = "red";
+    status.innerText =
+      "❌ ERRO NO SCRIPT — Não foi possível confirmar o envio. Tente novamente.";
+
+    if (botaoFinalizar) {
+      botaoFinalizar.disabled = false;
+      botaoFinalizar.innerText = "Finalizar";
+    }
+  }
+   setTimeout(() => location.reload(), 500);
+}
+
+</script>
+
+
+
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
